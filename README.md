@@ -50,9 +50,9 @@ It allows you to monitor UPS status, battery health, and power metrics in real-t
 **Mobile Interface**
 | Main Dashboard | Bottom Status | Charts |
 | :---: | :---: | :---: |
-| <img src="images/Mobile.png" width="250"> | <img src="images/MobileBotton.png" width="250"> | <img src="images/MobileChart.png" width="250"> |
+| <img src="image/Mobile.png" width="250"> | <img src="image/MobileBotton.png" width="250"> | <img src="image/MobileChart.png" width="250"> |
 | **Settings** | **Logs** | **Debug Terminal** |
-| <img src="images/MobileSetting.png" width="250"> | <img src="images/MobileLogs.png" width="250"> | <img src="images/MobileDebug.png" width="250"> |
+| <img src="image/MobileSetting.png" width="250"> | <img src="image/MobileLogs.png" width="250"> | <img src="image/MobileDebug.png" width="250"> |
 
 ---
 
