@@ -47,9 +47,9 @@ It allows you to monitor UPS status, battery health, and power metrics in real-t
 **Dashboard (EN)**
 ![Dashboard EN](image/PCIndexEN.png)
 | **Settings** | **System Logs** |
-| ![Settings](images/PCSetting.png) | ![Logs](images/PCLogs.png) |
+| ![Settings](image/PCSetting.png) | ![Logs](image/PCLogs.png) |
 | **Modbus Debugger** | **HEX Terminal** |
-| ![Modbus](images/PCModbus.png) | ![HEX](images/PCHexTTL.png) |
+| ![Modbus](image/PCModbus.png) | ![HEX](image/PCHexTTL.png) |
 
 **Mobile Interface**
 | Main Dashboard | Bottom Status | Charts |
