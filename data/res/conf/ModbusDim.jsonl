@@ -1,0 +1,37 @@
+{"type": "write_reg", "key": "buzzer_mute", "reg": 11046}
+{"type": "write_reg", "key": "auto_start", "reg": 11044}
+{"type": "write_reg", "key": "test_short", "reg": 12028}
+{"type": "write_reg", "key": "test_deep", "reg": 12021}
+{"type": "write_reg", "key": "test_stop", "reg": 12023}
+{"type": "write_reg", "key": "power_on", "reg": 11029}
+{"type": "write_reg", "key": "power_off", "reg": 11030}
+{"type": "read_task", "key": "in_voltage", "reg": 11000, "gain": 10.0, "len": 1}
+{"type": "read_task", "key": "in_freq", "reg": 11003, "gain": 10.0, "len": 1}
+{"type": "read_task", "key": "in_system", "reg": 11025, "gain": 1.0, "len": 1}
+{"type": "read_task", "key": "bypass_voltage", "reg": 11004, "gain": 10.0, "len": 1}
+{"type": "read_task", "key": "out_voltage", "reg": 11008, "gain": 10.0, "len": 1}
+{"type": "read_task", "key": "out_current", "reg": 11011, "gain": 10.0, "len": 1}
+{"type": "read_task", "key": "out_freq", "reg": 11014, "gain": 10.0, "len": 1}
+{"type": "read_task", "key": "out_active_power", "reg": 11015, "gain": 10.0, "len": 1}
+{"type": "read_task", "key": "out_apparent_power", "reg": 11018, "gain": 10.0, "len": 1}
+{"type": "read_task", "key": "load_ratio", "reg": 11021, "gain": 10.0, "len": 1}
+{"type": "read_task", "key": "power_mode", "reg": 11024, "gain": 1.0, "len": 1}
+{"type": "read_task", "key": "out_system", "reg": 11026, "gain": 1.0, "len": 1}
+{"type": "read_task", "key": "temperature", "reg": 11027, "gain": 10.0, "len": 1}
+{"type": "read_task", "key": "power_status", "reg": 11028, "gain": 1.0, "len": 1}
+{"type": "read_task", "key": "ups_status", "reg": 11043, "gain": 1.0, "len": 1}
+{"type": "read_task", "key": "bat_voltage", "reg": 12000, "gain": 10.0, "len": 1}
+{"type": "read_task", "key": "bat_status", "reg": 12002, "gain": 1.0, "len": 1}
+{"type": "read_task", "key": "bat_remain_cap", "reg": 12003, "gain": 1.0, "len": 1}
+{"type": "read_task", "key": "bat_remain_time", "reg": 12004, "gain": 1.0, "len": 2}
+{"type": "read_task", "key": "bat_cells", "reg": 12007, "gain": 1.0, "len": 1}
+{"type": "read_task", "key": "bat_cap_ah", "reg": 12033, "gain": 1.0, "len": 1}
+{"type": "read_task", "key": "energy_flow", "reg": 19006, "gain": 1.0, "len": 1}
+{"type": "read_task", "key": "alm_temp", "reg": 41180, "gain": 1.0, "len": 1}
+{"type": "read_task", "key": "alm_byp", "reg": 41185, "gain": 1.0, "len": 1}
+{"type": "read_task", "key": "alm_bat1", "reg": 41187, "gain": 1.0, "len": 1}
+{"type": "read_task", "key": "alm_bat2", "reg": 41188, "gain": 1.0, "len": 1}
+{"type": "read_task", "key": "alm_bat3", "reg": 41194, "gain": 1.0, "len": 1}
+{"type": "read_task", "key": "alm_in", "reg": 41195, "gain": 1.0, "len": 1}
+{"type": "read_task", "key": "alm_out", "reg": 41197, "gain": 1.0, "len": 1}
+{"type": "read_task", "key": "alm_inv", "reg": 41204, "gain": 1.0, "len": 1}

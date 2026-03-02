@@ -1,0 +1,16 @@
+{"test_day": 1}
+{"lang": "zh-cn"}
+{"test_minute": 11}
+{"sec_pwd": ""}
+{"ups_model_str": ""}
+{"auto_start": 1}
+{"ups_version": ""}
+{"buzzer_muted": true}
+{"ups_esn": ""}
+{"wifi_list": [{"ssid": "WIFI_PRIMARY", "pass": "YOUR_PASS_1"}, {"ssid": "WIFI_BACKUP", "pass": "YOUR_PASS_2"}]}
+{"test_limit": 50}
+{"test_schedule": "monthly"}
+{"test_hour": 1}
+{"log_limit": 50}
+{"history_limit": 1440}
+{"test_mode": "deep"}

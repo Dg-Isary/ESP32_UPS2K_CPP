@@ -1,0 +1,906 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Smart UPS Datacenter</title>
+    <link rel="icon" type="image/svg+xml" href="/res/favicon.svg">
+    <link rel="stylesheet" href="/res/font-awesome.css">
+    <script src="/res/hammer.min.js"></script>
+    <script src="/res/chart.min.js"></script>
+    <script src="/res/chartjs-plugin-zoom.min.js"></script>
+    <style>
+        :root {
+            --p: #1295e6; --bg: #f5f7fa; --box: #ffffff; --text: #333;
+            --pc-on: #27AE60; --pc-off: #E74C3C;
+            --danger: #E74C3C; --warning: #f39c12;
+            --ef-gray: #d1d5db; --ef-flow: #27AE60;
+        }
+        body { font-family: system-ui, sans-serif; background: var(--bg); color: var(--text); padding: 15px; margin: 0; }
+        .top-nav { background: white; border-radius: 16px; padding: 10px 24px; margin-bottom: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.03); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; border: 1px solid rgba(0,0,0,0.02); }
+        .logo { font-weight: 600; color: #cf0a2c; font-size: 1.2rem; letter-spacing: 0.3px; display: flex; align-items: center; gap: 6px; }
+        .nav-right { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+        .dropdown { position: relative; }
+        .dropbtn { background: transparent; border: 1px solid #e2e8f0; border-radius: 30px; padding: 8px 20px; cursor: pointer; font-size: 0.9rem; display: flex; align-items: center; gap: 6px; color: #2d3748; transition: 0.15s; font-weight: 500; background: white; white-space: nowrap; }
+        .dropbtn:hover { background: #f1f5f9; border-color: #cbd5e0; }
+        .dropdown-content { display: none; position: absolute; right: 0; top: 115%; background: white; min-width: 170px; border-radius: 14px; box-shadow: 0 12px 28px rgba(0,0,0,0.12); z-index: 100; border: 1px solid #edf2f7; overflow: hidden; backdrop-filter: blur(2px); }
+        .dropdown-content button { display: flex; align-items: center; gap:8px; width: 100%; padding: 12px 18px; border: none; background: none; text-align: left; font-size: 0.9rem; cursor: pointer; border-bottom: 1px solid #f1f5f9; color: #1e293b; transition: 0.1s; font-weight: 400; box-sizing: border-box; }
+        .dropdown-content button i { width: 16px; text-align: center; }
+        .dropdown-content button:last-child { border-bottom: none; }
+        .dropdown-content button:hover { background: #f8fafc; color: var(--p); font-weight: 500; }
+        .show { display: block; }
+        @media (max-width: 500px) { .nav-right { gap: 6px; } .dropbtn { padding: 8px 12px; font-size: 0.85rem; } .dropdown-content { right: auto; left: 0; min-width: 160px; } .dropdown-content button { padding: 12px 12px; font-size: 0.85rem; } }
+
+        .head-banner { text-align: center; margin-bottom: 20px; position: relative;}
+        .capacity-circle { font-size: 60px; font-weight: bold; color: var(--p); }
+        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 15px; }
+        .card { background: var(--box); border-radius: 12px; padding: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+        .card-title { border-bottom: 2px solid #eee; padding-bottom: 8px; margin-top: 0; color: #555; font-size: 18px; display: flex; justify-content: space-between; align-items: center;}
+        
+        .card-section { 
+            height: 250px; 
+            margin-bottom: 15px;
+        }
+        
+        .data-row { display: flex; justify-content: space-between; margin: 8px 0; font-size: 14px; border-bottom: 1px dashed #eee; padding-bottom: 5px; align-items: center;}
+        .data-val { font-weight: bold; color: var(--p); }
+        .btn, .btnf { display: inline-flex; align-items: center; justify-content: center; gap: 6px; } 
+        .btn { padding: 10px 15px; border: none; border-radius: 6px; cursor: pointer; color: white; font-weight: bold; flex-grow: 1; text-align: center; font-size: 14px; transition: 0.2s;}
+        .btnf { padding: 10px 15px; border: none; border-radius: 6px; cursor: pointer; color: white; font-weight: bold; width: 120px; flex-grow: 0; text-align: center; font-size: 14px; transition: 0.2s;}
+        .btn:active, .btnf:active { transform: scale(0.96); }
+        .btn-m { background-color: #E74C3C; } .btn-u { background-color: #27AE60; } .btn-b { background-color: #3498db; } .btn-w { background-color: #f39c12; } .btn-g { background-color: #8e44ad; }
+        
+        .footer-status { margin-top: 30px; background: white; border-radius: 40px; padding: 12px 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.03); font-size: 14px; border: 1px solid rgba(0,0,0,0.02); display: flex; align-items: center; justify-content: center; gap: 8px; }
+        #dt_state { font-weight: 600; color: var(--p); display: inline-block; }
+        
+        .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.6); display: none; align-items: center; justify-content: center; z-index: 1000; opacity: 0; transition: opacity 0.3s; backdrop-filter: blur(3px);}
+        .modal-overlay.active { display: flex; opacity: 1; }
+        .modal-content { background: white; padding: 25px; border-radius: 12px; width: 90%; max-width: 400px; transform: translateY(-30px); transition: transform 0.3s; box-shadow: 0 10px 30px rgba(0,0,0,0.2); max-height: 90vh; overflow-y: auto;}
+        .modal-overlay.active .modal-content { transform: translateY(0); }
+        .close-btn { float: right; cursor: pointer; font-size: 20px; color: #aaa; border: none; background: none;}
+        .input-group { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; font-size: 14px; gap: 10px; }
+        .input-group label { white-space: nowrap; color: #444; }
+        .input-group select, .input-group .inline-inputs { flex: 1; max-width: none; } 
+        .input-group select { padding: 8px; border: 1px solid #ccc; border-radius: 6px; outline: none; }
+        .inline-inputs { display: flex; gap: 5px; align-items: center; justify-content: flex-end; }
+        .inline-inputs input { width: 45px; text-align: center; padding: 6px; border: 1px solid #ccc; border-radius: 4px; height: 32px; box-sizing: border-box; outline:none; }
+        .inline-inputs input.long { width: 60px; }
+        .inline-inputs input.longer { width: 120px; text-align: left; }
+        
+        .log-item { padding: 8px 0; border-bottom: 1px dashed #edf2f7; font-size: 13px; display: flex; flex-direction: column; gap: 4px; }
+        .log-item:last-child { border-bottom: none; }
+        .log-time { color: #94a3b8; font-size: 12px; }
+        .log-tag-op { color: #1295e6; font-weight: bold; }
+        .log-tag-dc { color: #e67e22; font-weight: bold; }
+        .log-tag-sys { color: #8e44ad; font-weight: bold; }
+        
+        .pc-status-wrapper { position: relative; display: inline-flex; align-items: center; gap: 4px; font-weight: bold; transition: color 0.2s;}
+        .pc-status-icon { font-size: 18px; transition: color 0.2s; }
+        .pc-on { color: var(--pc-on); }
+        .pc-off { color: var(--pc-off); }
+        
+        .topo-container { position: relative; width: 100%; max-width: 600px; margin: 10px auto 25px; aspect-ratio: 400 / 150; background: #f8fafc; border-radius: 12px; border: 1px solid #e2e8f0; overflow: hidden; }
+        .topo-svg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
+        .topo-node { position: absolute; width: 40px; height: 40px; margin-left: -20px; margin-top: -20px; background: white; border: 2px solid var(--p); border-radius: 10px; display: flex; align-items: center; justify-content: center; color: var(--p); font-size: 18px; z-index: 2; transition: 0.3s; box-shadow: 0 3px 6px rgba(0,0,0,0.08); }
+        .topo-node.gray { border-color: #cbd5e0; color: #cbd5e0; box-shadow: none; }
+        .topo-path { fill: none; stroke: #e2e8f0; stroke-width: 3; stroke-linecap: square; stroke-linejoin: miter; transition: 0.3s; }
+        .topo-path.active { stroke: var(--ef-flow); }
+        .topo-path.flow-fwd { stroke: var(--ef-flow); stroke-dasharray: 6 6; animation: flowAnim 0.6s linear infinite; }
+        .topo-path.flow-rev { stroke: var(--ef-flow); stroke-dasharray: 6 6; animation: flowAnimRev 0.6s linear infinite; }
+        @keyframes flowAnim { from { stroke-dashoffset: 24; } to { stroke-dashoffset: 0; } }
+        @keyframes flowAnimRev { from { stroke-dashoffset: 0; } to { stroke-dashoffset: 24; } }
+
+        .battery-ring-wrapper { position: relative; width: 100%; display: flex; justify-content: center; margin: 5px 0 10px; }
+        .ring-container { position: relative; width: 180px; height: 180px; }
+        .ring-canvas { width: 100%; height: 100%; display: block; }
+        .ring-center-text { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 32px; font-weight: bold; color: #2c3e50; text-shadow: 1px 1px 2px rgba(255,255,255,0.8); display: flex; align-items: center; justify-content: center; margin: 0; line-height: 1; }
+        .voltage-indicator { margin: 10px 0 15px; }
+        .voltage-bar { position: relative; height: 10px; background: linear-gradient(90deg, #e74c3c, #f39c12, #27ae60); border-radius: 20px; width: 100%; }
+        .voltage-pointer { position: absolute; top: -5px; width: 4px; height: 20px; background: #2c3e50; border-radius: 4px; transform: translateX(-50%); transition: left 0.3s; border: 1px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.3); }
+        .voltage-values { display: flex; justify-content: space-between; font-size: 12px; color: #7f8c8d; margin-top: 5px; }
+        .battery-info-grid { margin-top: 10px; border-top: 1px dashed #ccc; padding-top: 10px; }
+
+        .chart-container { position: relative; height: 100%; width: 100%; min-height: 220px; margin-bottom: 20px; }
+        .zoom-hint { font-size: 12px; color: #aaa; text-align: right; padding-right: 10px; margin-bottom: 15px; }
+
+        .cd-overlay { position: fixed; top:0; left:0; right:0; bottom:0; background: rgba(0,0,0,0.5); display: none; align-items: center; justify-content: center; z-index: 2000; opacity: 0; transition: 0.2s; backdrop-filter: blur(4px); }
+        .cd-overlay.active { display: flex; opacity: 1; }
+        .cd-box { background: white; padding: 25px; border-radius: 12px; width: 90%; max-width: 340px; transform: translateY(-20px); transition: 0.2s; box-shadow: 0 10px 25px rgba(0,0,0,0.15); }
+        .cd-overlay.active .cd-box { transform: translateY(0); }
+        .cd-title { margin: 0 0 12px 0; font-size: 18px; color: #333; display: flex; align-items: center; gap: 8px; }
+        .cd-msg { font-size: 14px; color: #555; margin-bottom: 20px; line-height: 1.6; white-space: pre-wrap; }
+        .cd-input { width: 100%; padding: 12px; margin-bottom: 20px; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; font-size: 14px; outline: none; transition: border-color 0.2s; }
+        .cd-input:focus { border-color: var(--p); }
+        .cd-btns { display: flex; gap: 10px; justify-content: flex-end; }
+        .btn i, .btnf i, .dropbtn i, .dropdown-content button i, .footer-status i { margin-right: 5px; }
+    </style>
+</head>
+<body>
+    <div class="top-nav">
+        <span class="logo" id="nav_logo"><img src="/res/favicon.svg" width="20" height="20" alt="" style="vertical-align: middle; margin-right: 6px;"> 智能 UPS 数据中心</span>
+        <div class="nav-right">
+            <div class="dropdown">
+                <button class="dropbtn" onclick="toggleDropdown(event, 'devices')"><i class="fas fa-network-wired"></i> <span data-i18n="devices_title">终端设备</span></button>
+                <div class="dropdown-content" id="devicesDropdownContent">
+                    <button onclick="doPcAction(1, 'power')"><i class="fas fa-desktop" style="color:#27AE60;"></i> <span data-i18n="pc_power">PC 电源键</span></button>
+                    <button onclick="doPcAction(1, 'force')"><i class="fas fa-skull" style="color:#E74C3C;"></i> <span data-i18n="pc_force">PC 强制关机</span></button>
+                    <hr style="margin:5px 0; border:0; border-top:1px solid #edf2f7;">
+                    <button onclick="doPcAction(2, 'power')"><i class="fas fa-server" style="color:#27AE60;"></i> <span data-i18n="nas_power">Truenas 电源键</span></button>
+                    <button onclick="doPcAction(2, 'force')"><i class="fas fa-skull" style="color:#E74C3C;"></i> <span data-i18n="nas_force">Truenas 强制关机</span></button>
+                </div>
+            </div>
+
+            <div class="dropdown">
+                <button class="dropbtn" onclick="toggleDropdown(event, 'power')"><i class="fas fa-power-off"></i> <span data-i18n="power">电源</span></button>
+                <div class="dropdown-content" id="powerDropdownContent">
+                    <button onclick="doAction('power_on')"><i class="fas fa-play" style="color:#27AE60;"></i> <span data-i18n="power_on">开机</span></button>
+                    <button onclick="doPowerOff()"><i class="fas fa-stop" style="color:#E74C3C;"></i> <span data-i18n="power_off">立即断电关机</span></button>
+                </div>
+            </div>
+            <div class="dropdown">
+                <button class="dropbtn" onclick="toggleDropdown(event, 'test')"><i class="fas fa-vial"></i> <span data-i18n="test">自检</span></button>
+                <div class="dropdown-content" id="testDropdownContent">
+                    <button onclick="doAction('test_short')"><i class="fas fa-clock" style="color:#3498db;"></i> <span data-i18n="short">短时自检</span></button>
+                    <button onclick="doAction('test_deep')"><i class="fas fa-bolt" style="color:#f39c12;"></i> <span data-i18n="deep">深度自检</span></button>
+                    <button onclick="doAction('test_stop')"><i class="fas fa-ban" style="color:#E74C3C;"></i> <span data-i18n="stop">终止自检</span></button>
+                </div>
+            </div>
+            <div class="dropdown">
+                <button class="dropbtn" onclick="toggleDropdown(event, 'settings')"><i class="fas fa-cog"></i> <span data-i18n="settings">设置</span></button>
+                <div class="dropdown-content" id="settingsDropdownContent">
+                    <button onclick="openModal('debugModal')"><i class="fas fa-terminal" style="color:#3cff4c;"></i> <span data-i18n="modbus_term">调试终端</span></button>
+                    <button onclick="openModal('hexModal')"><i class="fas fa-hashtag" style="color:#e67e22;"></i> <span data-i18n="hex_term">Hex 终端</span></button>
+                    <button onclick="openModal('settingsModal')"><i class="fas fa-sliders-h" style="color:#3498ff;"></i> <span data-i18n="settings_title">系统综合设置</span></button>
+                </div>
+            </div>
+            <div class="dropdown">
+                <button class="dropbtn" onclick="openModal('logModal'); renderLogs('all'); hideDropdowns()"><i class="fas fa-history"></i> <span data-i18n="logs">日志</span></button>
+            </div>
+        </div>
+    </div>
+
+    <div class="head-banner">
+        <div class="capacity-circle" id="bat_remain_cap">--%</div>
+        <div id="status_text" style="color:#27AE60; font-weight:bold;"><span data-i18n="connecting">正在连接系统...</span></div>
+    </div>
+
+    <div class="grid">
+        <div class="card">
+            <h3 class="card-title"><i class="fas fa-server"></i> <span data-i18n="system_env">系统与环境</span></h3>
+            <div class="card-section">
+                <div class="data-row"><span data-i18n="ups_model"><i class="fas fa-tag"></i> 机器型号</span><span class="data-val" id="ups_model">--</span></div>
+                <div class="data-row"><span data-i18n="ups_esn"><i class="fas fa-barcode"></i> ESN序列号</span><span class="data-val" id="ups_esn">--</span></div>
+                <div class="data-row"><span data-i18n="ups_ver"><i class="fas fa-code-branch"></i> 固件版本</span><span class="data-val" id="ups_version">--</span></div>
+                <div class="data-row"><span data-i18n="device_time"><i class="far fa-clock"></i> 设备时间</span><span class="data-val" id="sys_time" style="color:#8e44ad;">--:--:--</span></div>
+                <div class="data-row"><span data-i18n="power_mode"><i class="fas fa-plug"></i> 供电模式</span><span class="data-val" id="power_mode">--</span></div>
+                <div class="data-row"><span data-i18n="status"><i class="fas fa-power-off"></i> 启停状态</span><span class="data-val" id="power_status">--</span></div>
+                <div class="data-row"><span data-i18n="internal_temp"><i class="fas fa-thermometer-half"></i> 机内温度</span><span class="data-val" id="temperature">-- ℃</span></div>
+                <div class="data-row"><span data-i18n="warnings"><i class="fas fa-exclamation-triangle"></i> 系统警告</span><span class="data-val" id="ups_status">--</span></div>
+                <div id="detailed_alarms" style="font-size: 12px; color: #E74C3C; text-align: right; margin-bottom: 5px;"></div>
+            </div>
+            
+            <h3 class="card-title"><i class="fas fa-chart-line"></i> <span data-i18n="temp_load_trend">温度与负载率趋势</span></h3>
+            <div class="card-section">
+                <div class="chart-container"><canvas id="batteryTempChart"></canvas></div>
+                <div class="zoom-hint"><i class="fas fa-mouse-pointer"></i> <span data-i18n="zoom_hint">滚轮缩放时间轴</span></div>
+                <div class="data-row">
+                    <span><i class="fas fa-network-wired"></i> <span data-i18n="devices_status">终端设备状态</span></span>
+                    <span class="data-val" style="display:flex; gap:15px; align-items:center;">
+                        <span class="pc-status-wrapper">
+                            <i class="fas fa-desktop pc-status-icon pc-off" id="pc1_icon"></i>
+                            <span id="pc1_state_text" class="pc-off">PC</span>
+                        </span>
+                        <span class="pc-status-wrapper">
+                            <i class="fas fa-server pc-status-icon pc-off" id="pc2_icon"></i>
+                            <span id="pc2_state_text" class="pc-off">Truenas</span>
+                        </span>
+                    </span>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h3 class="card-title"><i class="fas fa-project-diagram"></i> <span data-i18n="energy_flow">能量流向拓扑</span></h3>
+            <div class="card-section">
+                <div class="topo-container">
+                    <svg class="topo-svg" viewBox="0 0 400 160" preserveAspectRatio="xMidYMid meet">
+                        <path d="M 40 90 L 120 90" class="topo-path" id="pl-ac" />
+                        <path d="M 120 90 L 201.5 90" class="topo-path" id="pl-rec2bus" />
+                        <path d="M 201.5 90 L 280 90" class="topo-path" id="pl-bus2inv" />
+                        <path d="M 280 90 L 360 90" class="topo-path" id="pl-inv" />
+                        <path d="M 40 90 L 40 30 L 200 30" class="topo-path" id="pl-byp1" />
+                        <path d="M 200 30 L 360 30 L 360 90" class="topo-path" id="pl-byp2" />
+                        <path d="M 201.5 90 L 201.5 125" class="topo-path" id="pl-bat" />
+                    </svg>
+                    <div class="topo-node" id="nd-ac" style="left:12.5%; top:55%;"><i class="fas fa-plug"></i></div>
+                    <div class="topo-node" id="nd-rec" style="left:30%; top:55%;"><i class="fas fa-wave-square"></i></div>
+                    <div class="topo-node" id="nd-inv" style="left:70%; top:55%;"><i class="fas fa-bolt"></i></div>
+                    <div class="topo-node" id="nd-out" style="left:87.5%; top:55%;"><i class="fas fa-server"></i></div>
+                    <div class="topo-node" id="nd-byp" style="left:50%; top:20%;"><i class="fas fa-random"></i></div>
+                    <div class="topo-node" id="nd-bat" style="left:50%; top:80%;"><i class="fas fa-battery-full"></i></div>
+                </div>
+            </div>
+            
+            <h3 class="card-title"><i class="fas fa-chart-line"></i> <span data-i18n="power_data">供电数据</span></h3>
+            <div class="card-section">
+                <div class="data-row"><span data-i18n="input"><i class="fas fa-sign-in-alt"></i> 输入(频率/电压)</span><span class="data-val"><span id="in_system">--</span>  <span id="in_freq">--</span> Hz | <span id="in_voltage">--</span> V</span></div>
+                <div class="data-row"><span data-i18n="output"><i class="fas fa-sign-out-alt"></i> 输出(频率/电压)</span><span class="data-val"><span id="out_system">--</span>  <span id="out_freq">--</span> Hz | <span id="out_voltage">--</span> V</span></div>
+                <div class="data-row"><span data-i18n="power_current"><i class="fas fa-tachometer-alt"></i> 功率(有功/视在)电流</span><span class="data-val"><span id="out_active_power">-- W</span> | <span  id="out_apparent_power">-- VA</span> | <span id="out_current">--</span> A</span></div>
+                <div class="data-row"><span data-i18n="bypass"><i class="fas fa-random"></i> 旁路电压</span><span class="data-val"> <span id="bypass_voltage">--</span> V</span></div>
+                <div class="data-row"><span data-i18n="load_ratio"><i class="fas fa-percent"></i> 负载率</span><span class="data-val" id="load_ratio">-- %</span></div>
+                <div class="data-row"><span style="color: transparent;">_</span></div>
+            </div>
+
+            <h3 class="card-title"><i class="fas fa-chart-line"></i> <span data-i18n="io_trend">输入输出趋势</span></h3>
+            <div class="card-section">
+                <div class="chart-container"><canvas id="inputOutputChart"></canvas></div>
+                <div class="zoom-hint"><i class="fas fa-mouse-pointer"></i> <span data-i18n="zoom_hint">滚轮缩放时间轴</span></div>
+            </div>
+        </div>
+        
+        <div class="card">
+            <h3 class="card-title"><i class="fas fa-battery-three-quarters"></i> <span data-i18n="battery_matrix">电池组综合</span></h3>
+            <div class="card-section">
+                <div class="battery-ring-wrapper">
+                    <div class="ring-container"><canvas id="batteryRing" class="ring-canvas"></canvas><div class="ring-center-text" id="ringPercent">--%</div></div>
+                </div>
+                <div class="voltage-indicator">
+                    <div class="voltage-bar" id="voltageBar"><div class="voltage-pointer" id="voltagePointer" style="left: 50%;"></div></div>
+                    <div class="voltage-values"><span>60V</span><span>72V</span><span>84V</span></div>
+                </div>
+            </div>
+            
+            <h3 class="card-title"><i class="fas fa-car-battery"></i> <span data-i18n="battery_matrix">电池数据</span></h3>
+            <div class="card-section">
+                <div class="data-row"><span data-i18n="state"><i class="fas fa-bolt"></i> 电池状态</span><span class="data-val"><span id="bat_status">--</span> | <span id="bat_voltage">-- V</span></span></div>
+                <div class="data-row"><span><i class="fas fa-microchip"></i> <span data-i18n="test_state">自检状态</span></span><span class="data-val" id="dt_state">--</span></div>
+                <div class="data-row"><span data-i18n="remain_time"><i class="far fa-hourglass"></i> 后备预估时间</span><span class="data-val" id="bat_remain_time">--h--m--s</span></div>
+                <div class="data-row"><span data-i18n="capacity"><i class="fas fa-database"></i> 总容量 | 节数</span><span class="data-val"><span id="bat_cap_ah">--</span> Ah | <span id="bat_cells">--</span> <span data-i18n="cells_unit">节</span></span></div>
+            </div>
+
+            <h3 class="card-title"><i class="fas fa-chart-line"></i> <span data-i18n="bat_trend">电池容量与电压趋势</span></h3>
+            <div class="card-section">
+                <div class="chart-container"><canvas id="batteryHistoryChart"></canvas></div>
+                <div class="zoom-hint"><i class="fas fa-mouse-pointer"></i> <span data-i18n="zoom_hint">滚轮缩放时间轴</span></div>
+            </div>
+        </div>
+    </div> 
+
+    <div class="footer-status" style="justify-content: center;">
+        <div style="font-size: 13px; color: #94a3b8; display: flex; gap: 20px; align-items: center;">
+            <span title="实时可用内存 / 总内存"><i class="fas fa-memory"></i> RAM: <span id="sys_ram">--/-- KB</span></span>
+            <span title="可用闪存 / 闪存总大小"><i class="fas fa-hdd"></i> Flash: <span id="sys_flash">--/-- MB</span></span>
+        </div>
+    </div>
+
+    <div class="cd-overlay" id="customDialogOverlay">
+        <div class="cd-box">
+            <h3 class="cd-title" id="cdTitle"></h3>
+            <div class="cd-msg" id="cdMsg"></div>
+            <input class="cd-input" id="cdInput" type="text">
+            <div class="cd-btns">
+                <button class="btn btn-b" id="cdCancel" style="background:#94a3b8;" data-i18n="cancel">取消</button>
+                <button class="btn btn-u" id="cdConfirm" data-i18n="confirm">确认</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="settingsModal">
+        <div class="modal-content">
+            <button class="close-btn" onclick="closeModal('settingsModal')">×</button>
+            <h3 style="margin-top:0;"><i class="fas fa-sliders-h"></i> <span data-i18n="settings_title">系统综合设置</span></h3>
+            <form id="sch_form" onsubmit="event.preventDefault(); saveSchedule();">
+                <div class="input-group">
+                    <label><i class="fas fa-language"></i> <span data-i18n="language">语言/Language</span></label>
+                    <select id="t_lang" onchange="switchLanguage(this.value)">
+                        <option value="zh-cn">中文</option>
+                        <option value="en">English</option>
+                    </select>
+                </div>
+                <div class="input-group"><label><i class="far fa-calendar-check"></i> <span data-i18n="schedule_freq">定时频率</span></label>
+                    <select id="t_sch"><option value="none" data-i18n="off">关闭</option><option value="weekly" data-i18n="weekly">每周</option><option value="monthly" data-i18n="monthly">每月</option></select>
+                </div>
+                <div class="input-group"><label><i class="far fa-clock"></i> <span data-i18n="exec_time">执行时间</span></label>
+                    <div class="inline-inputs"><input type="number" id="t_day" min="1" max="31" placeholder="D">日 <input type="number" id="t_h" min="0" max="23" placeholder="H">时 <input type="number" id="t_m" min="0" max="59" placeholder="M">分</div>
+                </div>
+                <div class="input-group"><label><i class="fas fa-vial"></i> <span data-i18n="test_mode">自检模式</span></label>
+                    <select id="t_mode"><option value="short" data-i18n="short">短时自检</option><option value="deep" data-i18n="deep">深度自检</option></select>
+                </div>
+                <div class="input-group"><label><i class="fas fa-battery-quarter"></i> <span data-i18n="safe_limit">安全终止电量</span></label>
+                    <div class="inline-inputs"><input type="number" id="t_lim" min="10" max="99" class="long"> %</div>
+                </div>
+                <hr style="border:0; border-top:1px dashed #eee; margin:15px 0;">
+                
+                <div class="input-group"><label><i class="fas fa-lock"></i> <span data-i18n="sec_pwd">安全密码</span></label>
+                    <div class="inline-inputs"><input type="password" id="t_sec_pwd" placeholder="留空关闭" data-i18n-placeholder="off" class="longer" pattern="[A-Za-z0-9]*" title="仅允许字母和数字 / Letters & Numbers only"></div>
+                </div>
+                <div class="input-group"><label><i class="fas fa-volume-up"></i> <span data-i18n="buzzer">UPS 蜂鸣器</span></label>
+                    <select id="t_buzzer"><option value="0" data-i18n="buzzer_on">开启报警</option><option value="1" data-i18n="buzzer_off">静音模式</option></select>
+                </div>
+                <div class="input-group"><label><i class="fas fa-bolt"></i> <span data-i18n="auto_start">来电自动开机</span></label>
+                    <select id="t_autostart"><option value="0" data-i18n="off">关闭</option><option value="1" data-i18n="on">开启</option></select>
+                </div>
+                <div class="input-group"><label><i class="fas fa-database"></i> <span data-i18n="log_limit">本地日志限制</span></label>
+                    <div class="inline-inputs"><input type="number" id="t_log_limit" min="10" max="500" class="long"></div>
+                </div>
+                <div class="input-group"><label><i class="fas fa-chart-area"></i> <span data-i18n="chart_limit">图表数据限制</span></label>
+                    <div class="inline-inputs"><input type="number" id="t_hist_limit" min="60" max="5000" class="long"></div>
+                </div>
+                <button type="submit" class="btn btn-u" style="width: 100%; margin-top: 15px; padding:12px;"><i class="fas fa-save"></i> <span data-i18n="save">保存配置至设备</span></button>
+            </form>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="debugModal">
+        <div class="modal-content" style="max-width: 700px; width: 95%;">
+            <button class="close-btn" onclick="closeModal('debugModal')">×</button>
+            <h3 style="margin-top:0;"><i class="fas fa-bug"></i> <span data-i18n="modbus_term">Modbus 调试终端</span></h3>
+            <div style="display:flex; gap:10px; margin-bottom:10px; flex-wrap:wrap;">
+                <select id="dbg_fc" style="padding:8px; border-radius:4px; border:1px solid #ccc; outline:none;"><option value="3" data-i18n="read">读取(0x03)</option><option value="6" data-i18n="write">写入(0x06)</option></select>
+                <input type="text" id="dbg_reg" placeholder="Reg (0x2AF8)" style="padding:8px; border-radius:4px; border:1px solid #ccc; flex-grow:1; outline:none;">
+                <input type="text" id="dbg_val" placeholder="Len/Val" style="padding:8px; border-radius:4px; border:1px solid #ccc; flex-grow:1; outline:none;">
+                <button class="btn btn-u" style="flex-grow:0; padding:8px 20px;" onclick="sendDebug()"><i class="fas fa-paper-plane"></i> <span data-i18n="send">发送</span></button>
+            </div>
+            <div style="background:#1e1e1e; color:#0f0; padding:15px; border-radius:6px; font-family:monospace; font-size:14px; min-height:150px; max-height: 50vh; overflow-y:auto; word-break:break-all; line-height:1.5;" id="dbg_out">
+                <span style="color:#888;" data-i18n="modbus_wait">等待发送...</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="hexModal">
+        <div class="modal-content" style="max-width: 700px; width: 95%;">
+            <button class="close-btn" onclick="closeModal('hexModal')">×</button>
+            <h3 style="margin-top:0;"><i class="fas fa-hashtag"></i> <span data-i18n="hex_term">Hex 透传终端</span></h3>
+            <div style="display:flex; gap:10px; margin-bottom:10px; flex-wrap:wrap;">
+                <input type="text" id="hex_input" placeholder="e.g. 01 2b 0e 01 00 70 77" style="padding:8px; border-radius:4px; border:1px solid #ccc; flex-grow:1; outline:none; font-family:monospace;">
+                <button class="btn btn-u" style="flex-grow:0; padding:8px 20px;" onclick="sendHexDebug()"><i class="fas fa-paper-plane"></i> <span data-i18n="send">发送</span></button>
+            </div>
+            <div style="background:#1e1e1e; color:#0f0; padding:15px; border-radius:6px; font-family:monospace; font-size:14px; min-height:150px; max-height: 50vh; overflow-y:auto; word-break:break-all; line-height:1.5;" id="hex_out">
+                <span style="color:#888;" data-i18n="hex_hint">输入纯十六进制数据。<br>注意：需自行计算 CRC。</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="logModal">
+        <div class="modal-content" style="max-width: 600px; width: 95%;">
+            <button class="close-btn" onclick="closeModal('logModal')">×</button>
+            <h3 style="margin-top:0;"><i class="fas fa-history"></i> <span data-i18n="system_logs">系统日志</span></h3>
+            <div style="display:flex; gap:8px; margin-bottom:12px; flex-wrap:wrap;justify-content: center;">
+                <button class="btnf btn-u" onclick="renderLogs('all')"><i class="fas fa-list"></i> <span data-i18n="all">全部</span></button>
+                <button class="btnf btn-b" onclick="renderLogs('Control')"><i class="fas fa-mouse-pointer"></i> <span data-i18n="control">操作</span></button>
+                <button class="btnf btn-w" onclick="renderLogs('Discharge')"><i class="fas fa-bolt"></i> <span data-i18n="discharge">放电</span></button>
+                <button class="btnf btn-m" style="flex-grow:0; padding:10px;" onclick="doClearLogs()"><i class="fas fa-trash-alt"></i> <span data-i18n="clear">清空</span></button>
+            </div>
+            <div id="log_container" style="background:#f8fafc; padding:15px; border-radius:6px; height:300px; overflow-y:auto; border:1px solid #e2e8f0;">
+                <div style="color:#94a3b8; text-align:center; margin-top:40px;" data-i18n="loading_logs">加载中...</div>
+            </div>
+            <div style="text-align:center; font-size:12px; color:#e67e22; margin-top:10px;">
+                <i class="fas fa-shield-alt"></i> <span data-i18n="log_storage">安全保存在 Flash 中</span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ==========================================
+        // 添加了 cells_unit 字典
+        // ==========================================
+        const UPS_LANG = {
+            "zh-cn": {
+                "title_tag": "智能 UPS 数据中心", "logo_text": "智能 UPS 数据中心",
+                "devices_title": "终端设备", "devices_status": "终端设备状态",
+                "pc_power": "PC 电源键", "pc_force": "PC 强制关机",
+                "nas_power": "Truenas 电源键", "nas_force": "Truenas 强制关机",
+                "power": "电源", "power_on": "开机", "power_off": "立即断电关机", 
+                "test": "自检", "short": "短时自检", "deep": "深度自检", "stop": "终止自检",
+                "settings": "设置", "settings_title": "系统综合设置", "modbus_term": "调试终端", "hex_term": "Hex 终端", "logs": "日志",
+                "system_env": "系统与环境", "device_time": "设备时间", "ups_model": "机器型号", "ups_esn": "ESN序列号", "ups_ver": "固件版本",
+                "power_mode": "供电模式", "status": "启停状态", "internal_temp": "机内温度", "warnings": "系统警告",
+                "temp_load_trend": "温度与负载率趋势", "power_data": "供电数据", "input": "输入(频率/电压)", "output": "输出(频率/电压)", "power_current": "功率(有功/视在)电流",
+                "bypass": "旁路电压", "load_ratio": "负载率", "io_trend": "输入输出趋势", "energy_flow": "能量流向拓扑",
+                "battery_matrix": "电池组综合", "state": "电池状态", "remain_time": "后备预估时间", "capacity": "总容量 | 节数", "cells_unit": "节", "bat_trend": "电池容量与电压趋势",
+                "test_state": "自检状态", "language": "语言/Language", "schedule_freq": "定时频率", "off": "关闭", "on": "开启", "weekly": "每周", "monthly": "每月",
+                "exec_time": "执行时间", "test_mode": "自检模式", "safe_limit": "安全终止电量", "buzzer": "UPS 蜂鸣器", "auto_start": "来电自动开机",
+                "buzzer_on": "开启报警", "buzzer_off": "静音模式", "log_limit": "本地日志限制", "chart_limit": "图表数据限制", "save": "保存配置至设备",
+                "sec_pwd": "电源安全密码", "read": "读取(0x03)", "write": "写入(0x06)", "send": "发送", "modbus_wait": "等待发送原生 Modbus 指令...",
+                "hex_hint": "输入纯十六进制数据 (允许带空格)。\n注意：你需要自行计算并补全 CRC 校验码。",
+                "system_logs": "ESP32 系统日志", "all": "全部记录", "control": "操作记录", "discharge": "放电记录", "clear": "清空日志",
+                "loading_logs": "正在从 ESP32 加载...", "log_storage": "日志已安全保存在 ESP32 内部 Flash 中", "zoom_hint": "滚轮缩放时间轴",
+                "confirm_power_off": "警告：这将会切断后端负载所有电源！\n确定要立即执行【断电关机】吗？",
+                "pwd_req": "受保护的操作，请输入安全密码：", "pwd_err": "安全密码错误或权限被拒绝！",
+                "confirm_force_off": "强制关机可能导致系统数据丢失！确定继续？",
+                "connecting": "正在连接系统...", 
+                "pow_st": {0:"关机(就绪)", 1:"开机中", 2:"开机失败", 3:"开机完成"},
+                "pm_modes": {0:"均不供电", 1:"旁路供电", 2:"主路供电", 3:"电池供电", 5:"主路ECO"},
+                "bat_modes": {2:"休眠", 3:"浮充", 4:"均充", 5:"放电"},
+                "sys_modes": {0:"单相", 1:"三相"},
+                "testing": "UPS 硬件自检放电中", "auto_deep": "自动深度自检中 (<{0}% 将终止)", "manual_deep": "强制手动深度放电中",
+                "idle": "监控空闲", "normal": "运行正常", "system_normal": "系统通讯正常", "cancel": "取消", "confirm": "确认", "warn": "安全警告",
+                "al_in": "市电中断", "al_byp_v": "旁路电压异常", "al_byp_f": "旁路频率异常",
+                "al_ovt": "内部过温", "al_byp": "旁路异常", "al_bov": "电池过压", "al_bmt": "电池需维护", "al_blv": "电池低压", "al_bno": "电池未接", "al_out": "输出过载", "al_inv": "逆变器异常"
+            },
+            "en": {
+                "title_tag": "Smart UPS Datacenter", "logo_text": "Smart UPS Datacenter",
+                "devices_title": "Devices", "devices_status": "Terminals Status",
+                "pc_power": "PC Power Btn", "pc_force": "PC Force OFF",
+                "nas_power": "Truenas Power", "nas_force": "Truenas Force OFF",
+                "power": "Power", "power_on": "Turn ON", "power_off": "Immediate Cut-off",
+                "test": "Test", "short": "Short Test", "deep": "Deep Test", "stop": "Stop Test",
+                "settings": "Settings", "settings_title": "System Settings", "modbus_term": "Modbus Term", "hex_term": "Hex Term", "logs": "Logs",
+                "system_env": "System & Env", "device_time": "Device Time", "ups_model": "UPS Model", "ups_esn": "ESN Number", "ups_ver": "Firmware Ver",
+                "power_mode": "Power Mode", "status": "Status", "internal_temp": "Internal Temp", "warnings": "Warnings",
+                "temp_load_trend": "Temp & Load Trend", "power_data": "Power Data", "input": "Input (Freq/V)", "output": "Output (Freq/V)", "power_current": "Power/Current",
+                "bypass": "Bypass Vol", "load_ratio": "Load Ratio", "io_trend": "I/O Trend", "energy_flow": "Energy Topology",
+                "battery_matrix": "Battery Matrix", "state": "State", "remain_time": "Remain Time", "capacity": "Capacity | Cells", "cells_unit": "Cells", "bat_trend": "Bat V & Cap Trend",
+                "test_state": "Test State", "language": "Language", "schedule_freq": "Schedule Freq", "off": "Off", "on": "On", "weekly": "Weekly", "monthly": "Monthly",
+                "exec_time": "Exec Time", "test_mode": "Test Mode", "safe_limit": "Safe Limit", "buzzer": "UPS Alarm", "auto_start": "AC Auto Start",
+                "buzzer_on": "Enable", "buzzer_off": "Mute", "log_limit": "Log Limit", "chart_limit": "Chart Limit", "save": "Save to Device",
+                "sec_pwd": "Security Password", "read": "Read(0x03)", "write": "Write(0x06)", "send": "Send", "modbus_wait": "Awaiting Modbus command...",
+                "hex_hint": "Enter hex data (spaces allowed).\nNote: CRC must be included if required.",
+                "system_logs": "System Logs", "all": "All", "control": "Control", "discharge": "Discharge", "clear": "Clear",
+                "loading_logs": "Loading from ESP32...", "log_storage": "Logs safely stored in Flash", "zoom_hint": "Scroll to zoom",
+                "confirm_power_off": "Warning: This completely cuts off load power!\nProceed to shutdown?",
+                "pwd_req": "Protected action. Enter Security Password:", "pwd_err": "Password incorrect or access denied!",
+                "confirm_force_off": "Force shutdown may cause data loss! Proceed?",
+                "connecting": "Connecting...", 
+                "pow_st": {0:"Shutdown", 1:"Starting", 2:"Failed", 3:"Running"},
+                "pm_modes": {0:"None", 1:"Bypass", 2:"Line", 3:"Battery", 5:"ECO"},
+                "bat_modes": {2:"Sleep", "3":"Float", 4:"Equalize", 5:"Discharge"},
+                "sys_modes": {0:"1-Phase", 1:"3-Phase"},
+                "testing": "Hardware Self-Test Active", "auto_deep": "Auto Deep Test (<{0}% limit)", "manual_deep": "Manual Deep Test",
+                "idle": "Monitoring", "normal": "Normal", "system_normal": "System Normal", "cancel": "Cancel", "confirm": "Confirm", "warn": "Warning",
+                "al_in": "AC Fail", "al_byp_v": "Bypass Vol Err", "al_byp_f": "Bypass Freq Err",
+                "al_ovt": "Internal Over-temp", "al_byp": "Bypass Abnormal", "al_bov": "Bat Over-vol", "al_bmt": "Bat Maint Needed", "al_blv": "Bat Low Vol", "al_bno": "Bat Disconnected", "al_out": "Output Overload", "al_inv": "Inverter Fault"
+            }
+        };
+
+        let currentLang = 'zh-cn';
+        let tM = UPS_LANG['zh-cn']; 
+
+        function switchLanguage(lang) {
+            if(!UPS_LANG[lang]) return;
+            currentLang = lang; tM = UPS_LANG[lang];
+            
+            document.title = tM.title_tag || "UPS Datacenter";
+            document.getElementById('nav_logo').innerHTML = `<img src="/res/favicon.svg" width="20" height="20" alt="" style="vertical-align: middle; margin-right: 6px;"> ${tM.logo_text || "UPS Datacenter"}`;
+            
+            document.querySelectorAll('[data-i18n]').forEach(el => {
+                let k = el.getAttribute('data-i18n');
+                if (tM[k]) {
+                    if (el.children.length === 0) el.innerText = tM[k];
+                    else {
+                        let walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT, null, false);
+                        while (walker.nextNode()) {
+                            if (walker.currentNode.nodeValue.trim() !== '') { walker.currentNode.nodeValue = tM[k]; break; }
+                        }
+                    }
+                }
+            });
+            document.querySelectorAll('select option[data-i18n]').forEach(opt => { let k = opt.getAttribute('data-i18n'); if (tM[k]) opt.innerText = tM[k]; });
+            document.querySelectorAll('[data-i18n-placeholder]').forEach(el => { let k = el.getAttribute('data-i18n-placeholder'); if (tM[k]) el.placeholder = tM[k]; });
+            
+            updateData();
+            if (document.getElementById('logModal').classList.contains('active')) renderLogs(currentLogFilter);
+        }
+
+        function showModalDialog(opts) {
+            return new Promise(resolve => {
+                const overlay = document.getElementById('customDialogOverlay');
+                document.getElementById('cdTitle').innerHTML = opts.icon ? `<i class="${opts.icon}"></i> ${opts.title}` : opts.title;
+                document.getElementById('cdMsg').innerText = opts.msg;
+                const input = document.getElementById('cdInput');
+                if (opts.type === 'prompt') {
+                    input.style.display = 'block'; input.type = opts.isPwd ? 'password' : 'text'; input.value = opts.defaultVal || '';
+                } else { input.style.display = 'none'; }
+                
+                const btnCancel = document.getElementById('cdCancel');
+                const btnConfirm = document.getElementById('cdConfirm');
+                btnCancel.innerText = tM.cancel || 'Cancel'; btnConfirm.innerText = tM.confirm || 'OK';
+                if(opts.danger) btnConfirm.style.background = '#E74C3C'; else btnConfirm.style.background = '#1295e6';
+                
+                const cleanup = () => { overlay.classList.remove('active'); window.removeEventListener('keydown', keyHandler); };
+                const confirm = () => { cleanup(); resolve(opts.type === 'prompt' ? input.value : true); };
+                const cancel = () => { cleanup(); resolve(opts.type === 'prompt' ? null : false); };
+                const keyHandler = (e) => { if (e.key === 'Enter' && document.activeElement !== btnCancel) confirm(); if (e.key === 'Escape') cancel(); };
+                
+                btnCancel.onclick = cancel; btnConfirm.onclick = confirm; window.addEventListener('keydown', keyHandler);
+                overlay.classList.add('active');
+                if (opts.type === 'prompt') input.focus(); else btnConfirm.focus();
+            });
+        }
+        
+        async function apiCall(url) {
+            let res = await fetch(url);
+            if (res.status === 403) {
+                let pwd = await showModalDialog({type: 'prompt', title: tM.warn || "Warning", msg: tM.pwd_req || "Password Required:", isPwd: true, icon: 'fas fa-lock', danger: true});
+                if (pwd === null) return false;
+                let joiner = url.includes('?') ? '&' : '?';
+                res = await fetch(url + joiner + 'pwd=' + encodeURIComponent(pwd));
+                if (res.status === 403) { showModalDialog({type: 'alert', title: tM.warn || "Warning", msg: tM.pwd_err || "Password Error!", icon: 'fas fa-times-circle'}); return false; }
+            }
+            return res.ok;
+        }
+
+        function getConfirmPowerOff() { return tM.confirm_power_off || "Power OFF?"; }
+        function getConfirmForceOff() { return tM.confirm_force_off || "Force OFF?"; }
+
+        let currentLogFilter = 'all';
+        let batteryTempChart, ioChart, batteryRingChart, batteryHistoryChart;
+
+        function initRingChart() {
+            const ctx = document.getElementById('batteryRing').getContext('2d');
+            batteryRingChart = new Chart(ctx, {
+                type: 'doughnut', data: { datasets: [{ data: [0, 100], backgroundColor: ['#27AE60', '#ecf0f1'], borderWidth: 0, borderRadius: 8, spacing: 2 }] },
+                options: { cutout: '64%', responsive: true, maintainAspectRatio: true, plugins: { tooltip: { enabled: false } } }
+            });
+        }
+
+        function initTrendCharts() {
+            Chart.defaults.elements.point.radius = 0; Chart.defaults.elements.point.hoverRadius = 4;
+            Chart.defaults.plugins.legend.labels.usePointStyle = true; Chart.defaults.plugins.legend.labels.pointStyle = 'circle';
+
+            const customTooltip = {
+                backgroundColor: 'rgba(25, 42, 86, 0.75)',
+                titleColor: '#ffffff',
+                bodyColor: '#ffffff',
+                usePointStyle: true,
+                boxPadding: 6,
+                padding: 10,
+                cornerRadius: 8,
+                borderColor: 'rgba(255, 255, 255, 0.15)',
+                borderWidth: 1
+            };
+
+            const c1 = document.getElementById('batteryTempChart').getContext('2d');
+            batteryTempChart = new Chart(c1, {
+                type: 'line', data: { labels: [], datasets: [ { label: 'Temp (℃)', data: [], borderColor: '#d35400', backgroundColor: 'rgba(211,84,0,0.05)', yAxisID: 'y', tension: 0.2, borderWidth: 1.5, point: { radius: 1.5 } }, { label: 'Load (%)', data: [], borderColor: '#16a085', backgroundColor: 'rgba(22,160,133,0.05)', yAxisID: 'y1', tension: 0.2, borderWidth: 1.5, point: { radius: 1.5 } } ] },
+                options: { responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false }, plugins: { tooltip: customTooltip, zoom: { pan: { enabled: true, mode: 'x' }, zoom: { wheel: { enabled: true }, mode: 'x' } } }, scales: { y: { type: 'linear', display: true, position: 'left' }, y1: { type: 'linear', display: true, position: 'right', grid: { drawOnChartArea: false } } } }
+            });
+
+            const c2 = document.getElementById('inputOutputChart').getContext('2d');
+            ioChart = new Chart(c2, {
+                type: 'line', data: { labels: [], datasets: [ { label: 'In (V)', data: [], borderColor: '#f39c12', yAxisID: 'y', tension: 0.2, borderWidth: 1.5, point: { radius: 1.5 } }, { label: 'Out (V)', data: [], borderColor: '#8e44ad', yAxisID: 'y', tension: 0.2, borderWidth: 1.5, point: { radius: 1.5 } }, { label: 'Current (A)', data: [], borderColor: '#34495e', yAxisID: 'y1', tension: 0.2, borderWidth: 1.5, point: { radius: 1.5 } }, { label: 'PF (%)', data: [], borderColor: '#2980b9', yAxisID: 'y1', tension: 0.2, borderWidth: 1.5, borderDash: [5, 5], point: { radius: 1.5 } } ] },
+                options: { responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false }, plugins: { tooltip: customTooltip, zoom: { pan: { enabled: true, mode: 'x' }, zoom: { wheel: { enabled: true }, mode: 'x' } } }, scales: { y: { type: 'linear', display: true, position: 'left' }, y1: { type: 'linear', display: true, position: 'right', grid: { drawOnChartArea: false } } } }
+            });
+
+            const c3 = document.getElementById('batteryHistoryChart').getContext('2d');
+            batteryHistoryChart = new Chart(c3, {
+                type: 'line', data: { labels: [], datasets: [ { label: 'Cap (%)', data: [], borderColor: '#27ae60', yAxisID: 'y', tension: 0.2, borderWidth: 1.5, backgroundColor: 'rgba(39, 174, 96, 0.1)', fill: true, point: { radius: 1.5 } }, { label: 'Voltage (V)', data: [], borderColor: '#e74c3c', yAxisID: 'y1', tension: 0.2, borderWidth: 1.5, point: { radius: 1.5 } } ] },
+                options: { responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false }, plugins: { tooltip: customTooltip, zoom: { pan: { enabled: true, mode: 'x' }, zoom: { wheel: { enabled: true }, mode: 'x' } } }, scales: { y: { type: 'linear', display: true, position: 'left', min: 0, max: 100 }, y1: { type: 'linear', display: true, position: 'right', grid: { drawOnChartArea: false } } } }
+            });
+        }
+
+        function loadHistory() {
+            fetch('/api/history').then(r => r.json()).then(data => {
+                if(!data || !data.length) return;
+                let l = [], t = [], bv = [], bc = [], iv = [], ov = [], oc = [], lr = [], pf = [];
+                data.forEach(r => { 
+                    l.push(r[0]); t.push(r[1]); bv.push(r[2]); bc.push(r[3]); 
+                    iv.push(r[4]); ov.push(r[5]); oc.push(r[6]); 
+                    let active = r[7], apparent = r[8];
+                    pf.push(apparent > 0 ? (active / apparent * 100).toFixed(1) : 0);
+                    lr.push(r[9]); 
+                });
+                batteryTempChart.data.labels = l; batteryTempChart.data.datasets[0].data = t; batteryTempChart.data.datasets[1].data = lr; batteryTempChart.update();
+                ioChart.data.labels = l; ioChart.data.datasets[0].data = iv; ioChart.data.datasets[1].data = ov; ioChart.data.datasets[2].data = oc; ioChart.data.datasets[3].data = pf; ioChart.update();
+                batteryHistoryChart.data.labels = l; batteryHistoryChart.data.datasets[0].data = bc; batteryHistoryChart.data.datasets[1].data = bv; batteryHistoryChart.update();
+            }).catch(()=>{});
+        }
+
+        function updateEnergyFlow(ef) {
+            let getS = (val, shift) => (val >> shift) & 3;
+            let cPath = (id, st, rev) => {
+                let el = document.getElementById(id); 
+                el.classList.remove('active', 'flow-fwd', 'flow-rev', 'flow-l');
+                if (st === 1) el.classList.add('active'); 
+                else if (st === 2) el.classList.add(rev ? 'flow-l' : 'flow-fwd'); 
+                else if (st === 3) el.classList.add(rev ? 'flow-fwd' : 'flow-l');
+            };
+            let cNode = (id, active) => { 
+                let el = document.getElementById(id);
+                if(active) el.classList.remove('gray'); else el.classList.add('gray');
+            };
+
+            let ac = getS(ef, 0), rec2bus = getS(ef, 2), bus2inv = getS(ef, 4), bat = getS(ef, 6), inv2out = getS(ef, 8), byp = getS(ef, 12), out = getS(ef, 14);
+            
+            cPath('pl-ac', ac); 
+            cPath('pl-rec2bus', rec2bus); 
+            cPath('pl-bus2inv', bus2inv);
+            cPath('pl-inv', inv2out);
+            
+            let bEl = document.getElementById('pl-bat'); 
+            bEl.classList.remove('active', 'flow-fwd', 'flow-rev', 'flow-l');
+            if(bat===1) bEl.classList.add('active'); 
+            else if(bat===2) bEl.classList.add('flow-fwd'); 
+            else if(bat===3) bEl.classList.add('flow-rev'); 
+            
+            cPath('pl-byp1', byp); 
+            cPath('pl-byp2', out); 
+
+            cNode('nd-ac', ac>0); cNode('nd-rec', rec2bus>0); cNode('nd-bat', bat>0); cNode('nd-inv', inv2out>0); cNode('nd-byp', byp>0); cNode('nd-out', inv2out>0 || out>0);
+        }
+
+        function updateData() {
+            if (!tM.pow_st) return; 
+            fetch('/api/status').then(res => res.json()).then(d => {
+                document.getElementById('sys_time').innerText = d.sys_time;
+                document.getElementById('ups_model').innerText = d.ups_model_str !== "--" ? d.ups_model_str : "UPS-2000A-" + d.ups_model.toFixed(0) + "K";
+                document.getElementById('ups_esn').innerText = d.ups_esn;
+                document.getElementById('ups_version').innerText = d.ups_version;
+                
+                if (d.sys_ram_total) {
+                    let rF = (d.sys_ram_free/1024).toFixed(1), rT = (d.sys_ram_total/1024).toFixed(1);
+                    document.getElementById('sys_ram').innerText = `${rF}/${rT} KB`;
+                    document.getElementById('sys_ram').style.color = (d.sys_ram_free<15360)?'#E74C3C':'#94a3b8';
+                    document.getElementById('sys_flash').innerText = `${(d.sys_flash_free/1048576).toFixed(2)}/${(d.sys_flash_total/1048576).toFixed(2)} MB`;
+                }
+                
+                document.getElementById('bat_remain_cap').innerText = Math.round(d.bat_remain_cap) + "%";
+                if(batteryRingChart) {
+                    let c = Math.min(100, Math.max(0, Math.round(d.bat_remain_cap)));
+                    batteryRingChart.data.datasets[0].data = [c, 100-c];
+                    batteryRingChart.data.datasets[0].backgroundColor[0] = c>50?'#27AE60':(c>20?'#f39c12':'#E74C3C');
+                    batteryRingChart.update();
+                    document.getElementById('ringPercent').innerText = c+'%';
+                }
+                let vp = document.getElementById('voltagePointer');
+                if(vp) vp.style.left = Math.min(100, Math.max(0, (d.bat_voltage-60)/24*100)) + '%';
+
+                document.getElementById('in_voltage').innerText = d.in_voltage.toFixed(1); document.getElementById('in_freq').innerText = d.in_freq.toFixed(1);
+                document.getElementById('bypass_voltage').innerText = d.bypass_voltage.toFixed(1); document.getElementById('out_voltage').innerText = d.out_voltage.toFixed(1);
+                document.getElementById('out_current').innerText = d.out_current.toFixed(1); document.getElementById('out_freq').innerText = d.out_freq.toFixed(1);
+                document.getElementById('out_active_power').innerText = (d.out_active_power*1000).toFixed(0)+" W"; document.getElementById('out_apparent_power').innerText = (d.out_apparent_power*1000).toFixed(0)+" VA";
+                document.getElementById('load_ratio').innerText = d.load_ratio.toFixed(0)+"%"; document.getElementById('temperature').innerText = d.temperature.toFixed(1)+"℃";
+                document.getElementById('bat_voltage').innerText = d.bat_voltage.toFixed(1)+"V";
+                
+                let s = Math.floor(d.bat_remain_time);
+                document.getElementById('bat_remain_time').innerText = `${Math.floor(s/3600).toString().padStart(2,'0')}h${Math.floor((s%3600)/60).toString().padStart(2,'0')}m${(s%60).toString().padStart(2,'0')}s`;
+                document.getElementById('bat_cap_ah').innerText = d.bat_cap_ah; document.getElementById('bat_cells').innerText = d.bat_cells;
+
+                updateEnergyFlow(d.energy_flow);
+
+                const p_stat = Math.floor(d.power_status); const p_mode = Math.floor(d.power_mode);
+                const b_stat = Math.floor(d.bat_status); const in_sys = Math.floor(d.in_system); const out_sys = Math.floor(d.out_system);
+
+                document.getElementById('power_status').innerText = tM?.pow_st?.[p_stat] ?? p_stat;
+                document.getElementById('power_mode').innerText = tM?.pm_modes?.[p_mode] ?? p_mode;
+                document.getElementById('bat_status').innerText = tM?.bat_modes?.[b_stat] ?? b_stat;
+                if(document.getElementById('in_system')) document.getElementById('in_system').innerText = tM?.sys_modes?.[in_sys] ?? in_sys;
+                if(document.getElementById('out_system')) document.getElementById('out_system').innerText = tM?.sys_modes?.[out_sys] ?? out_sys;
+                
+                let ic1 = document.getElementById('pc1_icon'), tx1 = document.getElementById('pc1_state_text');
+                if (d.pc1_state) { 
+                    ic1.className='fas fa-desktop pc-status-icon pc-on'; tx1.className='pc-on';
+                } else { 
+                    ic1.className='fas fa-desktop pc-status-icon pc-off'; tx1.className='pc-off';
+                }
+                
+                let ic2 = document.getElementById('pc2_icon'), tx2 = document.getElementById('pc2_state_text');
+                if (d.pc2_state) { 
+                    ic2.className='fas fa-server pc-status-icon pc-on'; tx2.className='pc-on';
+                } else { 
+                    ic2.className='fas fa-server pc-status-icon pc-off'; tx2.className='pc-off';
+                }
+
+                let aw = [];
+                let d_in = Math.floor(d.alm_in);
+                let isOutage = (d_in !== 65535 && ((d_in >> 8) & 1)); 
+                
+                if (d.alm_temp !== 65535 && ((d.alm_temp>>3)&1)) aw.push(tM?.al_ovt || "OVT");
+                if (d.alm_in !== 65535 && ((d.alm_in>>8)&1)) aw.push(tM?.al_in || "AC Fail");
+                
+                if (d.alm_byp !== 65535 && !isOutage) { 
+                    if ((d.alm_byp>>1)&1) aw.push(tM?.al_byp_v || "Byp Vol Err"); 
+                    if ((d.alm_byp>>2)&1) aw.push(tM?.al_byp_f || "Byp Freq Err"); 
+                }
+                
+                if (d.alm_bat1 !== 65535 && ((d.alm_bat1>>3)&1)) aw.push(tM?.al_bov || "Bat OverVol");
+                if (d.alm_bat2 !== 65535) { 
+                    if ((d.alm_bat2>>1)&1) aw.push(tM?.al_bmt || "Bat Maint"); 
+                    if ((d.alm_bat2>>3)&1) aw.push(tM?.al_blv || "Bat LowVol"); 
+                }
+                if (d.alm_bat3 !== 65535 && ((d.alm_bat3>>4)&1)) aw.push(tM?.al_bno || "Bat NoConn");
+                if (d.alm_out !== 65535 && ((d.alm_out>>5)&1)) aw.push(tM?.al_out || "Overload");
+                if (d.alm_inv !== 65535 && (((d.alm_inv>>5)&1) || ((d.alm_inv>>6)&1) || ((d.alm_inv>>7)&1))) aw.push(tM?.al_inv || "Inv Err");
+                
+                let el = document.getElementById('ups_status'), head = document.getElementById('status_text');
+                if(aw.length > 0) { 
+                    el.innerText = aw.join(" | "); 
+                    el.style.color=head.style.color="red"; 
+                    head.innerHTML=`<i class="fas fa-exclamation-circle"></i> ${aw.join(", ")}`; 
+                } else { 
+                    el.innerText = tM?.normal || "Normal"; 
+                    el.style.color=head.style.color="#27AE60"; 
+                    head.innerHTML=`<i class="fas fa-check-circle"></i> ${tM?.system_normal || "System Normal"}`; 
+                }
+
+                document.getElementById('detailed_alarms').innerHTML = aw.length ? `<i class="fas fa-info-circle"></i> HW: ${aw.join(" | ")}` : "";
+
+                let dt = document.getElementById('dt_state');
+                let isHardwareTesting = (d.ups_status !== 65535 && ((d.ups_status >> 2) & 1));
+
+                if (isHardwareTesting) {
+                    dt.innerText = tM?.testing || "UPS 硬件自检放电中";
+                    dt.style.color = "#f39c12";
+                } else if(d.auto_deep_test_active) { 
+                    dt.innerText = (tM?.auto_deep || "").replace('{0}', d.test_limit); 
+                    dt.style.color = "#e67e22"; 
+                } else if(d.manual_deep_test_active) { 
+                    dt.innerText = tM?.manual_deep || "Deep Test"; 
+                    dt.style.color = "#E74C3C"; 
+                } else { 
+                    dt.innerText = tM?.idle || "Idle"; 
+                    dt.style.color = "#27AE60"; 
+                }
+            }).catch(()=>{}); 
+        }
+
+        function renderLogs(filter = 'all') {
+            currentLogFilter = filter;
+            fetch('/api/logs').then(r=>r.json()).then(logs => {
+                let c = document.getElementById('log_container'); c.innerHTML = '';
+                let f = logs.filter(l => filter === 'all' || l.type === filter);
+                if(!f.length) { c.innerHTML = `<div style="color:#94a3b8; text-align:center; margin-top:40px;">${tM?.clear || 'No logs'}</div>`; return; }
+                f.forEach(l => {
+                    let tc = l.type === 'Control' ? 'log-tag-op' : (l.type === 'Discharge' ? 'log-tag-dc' : 'log-tag-sys');
+                    let tn = l.type;
+                    if(currentLang !== 'zh-cn') { if(l.type==='操作') tn='Ctrl'; else if(l.type==='放电') tn='Dischg'; else tn='Sys'; }
+                    c.innerHTML += `<div class="log-item"><div class="log-time">${l.time}</div><div><span class="${tc}">[${tn}]</span> ${l.msg}</div></div>`;
+                });
+            }).catch(()=>{});
+        }
+
+        async function doClearLogs() { 
+            let ok = await showModalDialog({type:'confirm', title: tM?.warn || 'Warning', msg: tM?.clear || 'Clear all logs?', icon: 'fas fa-trash-alt', danger: true});
+            if(ok) { await apiCall('/api/logs_clear'); renderLogs(currentLogFilter); }
+        }
+
+        fetch('/api/get_config').then(r=>r.json()).then(c => {
+            document.getElementById('t_sch').value = c.test_schedule; document.getElementById('t_day').value = c.test_day;
+            document.getElementById('t_h').value = c.test_hour; document.getElementById('t_m').value = c.test_minute;
+            document.getElementById('t_mode').value = c.test_mode; document.getElementById('t_lim').value = c.test_limit;
+            document.getElementById('t_log_limit').value = c.log_limit || 50; document.getElementById('t_hist_limit').value = c.history_limit || 1440;
+            document.getElementById('t_buzzer').value = c.buzzer_muted ? "1" : "0";
+            document.getElementById('t_autostart').value = c.auto_start ? "1" : "0";
+            document.getElementById('t_sec_pwd').value = c.sec_pwd || ""; 
+            currentLang = c.lang || 'zh-cn'; document.getElementById('t_lang').value = currentLang; switchLanguage(currentLang);
+        }).catch(()=>{ switchLanguage('zh-cn'); }); 
+
+        async function doPcAction(id, action) {
+            hideDropdowns();
+            if (action === 'force') {
+                let ok = await showModalDialog({type: 'confirm', title: tM?.warn || 'Warn', msg: getConfirmForceOff(), icon: 'fas fa-exclamation-triangle', danger: true});
+                if (!ok) return;
+            }
+            let res = await apiCall(`/api/pc_ctrl?pc=${id}&action=${action}`);
+            if(res) updateData();
+        }
+
+        async function doPowerOff() {
+            let ok = await showModalDialog({type:'confirm', title: tM?.warn || 'Warn', msg: getConfirmPowerOff(), icon: 'fas fa-bolt', danger: true});
+            if(ok) { await apiCall('/api/ctrl?action=power_off'); updateData(); }
+        }
+
+        async function doAction(action) { 
+            let ok = await apiCall('/api/ctrl?action=' + action); 
+            if(ok) updateData(); 
+        }
+        
+        function toggleDropdown(event, id) {
+            event.stopPropagation();
+            let c = document.getElementById(id + 'DropdownContent');
+            let wasShown = c.classList.contains('show');
+            hideDropdowns();
+            if (!wasShown) c.classList.add('show');
+        }
+        function hideDropdowns() { document.querySelectorAll('.dropdown-content').forEach(el => el.classList.remove('show')); }
+        document.addEventListener('click', e => { 
+            if(!e.target.closest('.dropbtn')) hideDropdowns();
+        });
+        
+        function openModal(id) { hideDropdowns(); document.getElementById(id).classList.add('active'); }
+        function closeModal(id) { document.getElementById(id).classList.remove('active'); }
+
+        function saveSchedule() {
+            let sch = document.getElementById('t_sch').value;
+            let day = document.getElementById('t_day').value;
+            let h = document.getElementById('t_h').value;
+            let m = document.getElementById('t_m').value;
+            let mode = document.getElementById('t_mode').value;
+            let lim = document.getElementById('t_lim').value;
+            let log_limit = document.getElementById('t_log_limit').value || 50;
+            let hist_limit = document.getElementById('t_hist_limit').value || 1440;
+            let buzzer = document.getElementById('t_buzzer').value;
+            let autostart = document.getElementById('t_autostart').value;
+            let lang = document.getElementById('t_lang').value;
+            let sec_pwd = encodeURIComponent(document.getElementById('t_sec_pwd').value);
+
+            let u = `/api/set_config?sch=${sch}&day=${day}&h=${h}&m=${m}&mode=${mode}&limit=${lim}&log_limit=${log_limit}&hist_limit=${hist_limit}&buzzer=${buzzer}&autostart=${autostart}&lang=${lang}&set_pwd=${sec_pwd}`;
+            
+            fetch(u).then(()=>{ 
+                showModalDialog({type:'alert', title: 'OK', msg: tM?.save || 'Saved!'}); 
+                switchLanguage(lang); 
+                closeModal('settingsModal'); 
+                updateData(); 
+            }).catch(()=>{ 
+                showModalDialog({type:'alert', title: 'Err', msg: 'Failed'}); 
+            });
+        }
+
+        async function sendDebug() {
+            let fc = document.getElementById('dbg_fc').value;
+            let reg = document.getElementById('dbg_reg').value;
+            let val = document.getElementById('dbg_val').value;
+            if(!reg || !val) return;
+            document.getElementById('dbg_out').innerHTML = `<span style='color:#f39c12'><i class='fas fa-spinner fa-spin'></i> ${tM?.send || 'Sending'}...</span>`;
+            
+            let url = `/api/debug?fc=${fc}&reg=${encodeURIComponent(reg)}&val=${encodeURIComponent(val)}`;
+            try {
+                let res = await fetch(url);
+                // 专属的 403 拦截逻辑
+                if (res.status === 403) {
+                    let pwd = await showModalDialog({type: 'prompt', title: tM?.warn || "Warning", msg: tM?.pwd_req || "安全密码 / Password:", isPwd: true, danger: true});
+                    if (pwd === null) { document.getElementById('dbg_out').innerHTML = ""; return; }
+                    res = await fetch(url + '&pwd=' + encodeURIComponent(pwd));
+                    if (res.status === 403) { 
+                        showModalDialog({type: 'alert', title: 'Error', msg: tM?.pwd_err || "密码错误 / Password Error!"}); 
+                        document.getElementById('dbg_out').innerHTML = "<span style='color:red'>Forbidden</span>";
+                        return; 
+                    }
+                }
+                if (!res.ok) throw new Error('Request Failed');
+                
+                // 成功后解析数据
+                let d = await res.json();
+                let rH = d.req.map(b=>b.toString(16).padStart(2,'0').toUpperCase()).join(' ');
+                let rxres = d.res.length ? d.res.map(b=>b.toString(16).padStart(2,'0').toUpperCase()).join(' ') : "Timeout / No Response";
+                let p = "Unrecognized";
+                if(fc=="3" && d.res.length>=5) { 
+                    let v=(d.res[3]<<8)|d.res[4]; 
+                    let bin = v.toString(2).padStart(16, '0').match(/.{1,4}/g).join(' '); 
+                    p=`Hex: 0x${v.toString(16).padStart(4,'0').toUpperCase()} | Dec: ${v}<br>Bin: <span style="color:#0ff;">${bin}</span>`; 
+                }
+                else if(fc=="6" && d.res.length>=6) p="Success";
+                document.getElementById('dbg_out').innerHTML = `<div style="color:#aaa;">[TX] ${rH}</div><div style="color:#0f0; margin-top:8px;">[RX] ${rxres}</div><div style="color:#fff; margin-top:8px;">[Parse]<br>${p}</div>`;
+            } catch(e) {
+                document.getElementById('dbg_out').innerHTML = "<span style='color:red'>Failed / Error</span>";
+            }
+        }
+
+        async function sendHexDebug() {
+            let val = document.getElementById('hex_input').value; if(!val) return;
+            document.getElementById('hex_out').innerHTML = `<span style='color:#f39c12'><i class='fas fa-spinner fa-spin'></i> ${tM?.send || 'Sending'}...</span>`;
+            
+            let url = `/api/hex_debug?data=${encodeURIComponent(val)}`;
+            try {
+                let res = await fetch(url);
+                // 专属的 403 拦截逻辑
+                if (res.status === 403) {
+                    let pwd = await showModalDialog({type: 'prompt', title: tM?.warn || "Warning", msg: tM?.pwd_req || "安全密码 / Password:", isPwd: true, danger: true});
+                    if (pwd === null) { document.getElementById('hex_out').innerHTML = ""; return; }
+                    res = await fetch(url + '&pwd=' + encodeURIComponent(pwd));
+                    if (res.status === 403) { 
+                        showModalDialog({type: 'alert', title: 'Error', msg: tM?.pwd_err || "密码错误 / Password Error!"}); 
+                        document.getElementById('hex_out').innerHTML = "<span style='color:red'>Forbidden</span>";
+                        return; 
+                    }
+                }
+                if (!res.ok) throw new Error('Request Failed');
+                
+                // 成功后解析数据
+                let d = await res.json();
+                let rxH = d.res.length ? d.res.map(b=>b.toString(16).padStart(2,'0').toUpperCase()).join(' ') : "Timeout / No Response";
+                let rxD = d.res.length ? d.res.join(' ') : "-";
+                let rxS = d.res.length ? d.res.map(b=>(b>=32&&b<=126)?String.fromCharCode(b):'.').join('') : "-";
+                document.getElementById('hex_out').innerHTML = `<div style="color:#aaa;">[TX] ${d.req}</div><div style="color:#0f0; margin-top:8px;">[RX Hex] ${rxH}</div><div style="color:#0aa; margin-top:4px;">[RX Dec] ${rxD}</div><div style="color:#d90; margin-top:4px;">[RX Str] ${rxS}</div>`;
+            } catch(e) {
+                document.getElementById('hex_out').innerHTML = "<span style='color:red'>Failed / Error</span>";
+            }
+        }
+		
+        window.addEventListener('DOMContentLoaded', () => {
+            initRingChart(); initTrendCharts(); loadHistory();
+            setInterval(loadHistory, 60000); setInterval(updateData, 2000);
+        });
+    </script>
+</body>
+</html>
