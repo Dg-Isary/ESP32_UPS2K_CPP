@@ -38,7 +38,7 @@ It allows you to monitor UPS status, battery health, and power metrics in real-t
 6. Visit `http://<ESP32_IP>` for the Desktop dashboard, or `http://<ESP32_IP>/m` for the Mobile app. Default password is blank.
 
 ### 📸 Screenshots
-**Desktop Interface**
+
 **Desktop Interface**
 
 **Dashboard (CN)**
@@ -47,16 +47,16 @@ It allows you to monitor UPS status, battery health, and power metrics in real-t
 **Dashboard (EN)**
 ![Dashboard EN](image/PCIndexEN.png)
 | **Settings** | **System Logs** |
-| ![Settings](image/PCSetting.png) | ![Logs](image/PCLogs.png) |
+| ![Settings](images/PCSetting.png) | ![Logs](images/PCLogs.png) |
 | **Modbus Debugger** | **HEX Terminal** |
-| ![Modbus](image/PCModbus.png) | ![HEX](image/PCHexTTL.png) |
+| ![Modbus](images/PCModbus.png) | ![HEX](images/PCHexTTL.png) |
 
 **Mobile Interface**
 | Main Dashboard | Bottom Status | Charts |
 | :---: | :---: | :---: |
-| <img src="image/Mobile.png" width="250"> | <img src="image/MobileBotton.png" width="250"> | <img src="image/MobileChart.png" width="250"> |
+| <img src="images/Mobile.png" width="250"> | <img src="images/MobileBotton.png" width="250"> | <img src="images/MobileChart.png" width="250"> |
 | **Settings** | **Logs** | **Debug Terminal** |
-| <img src="image/MobileSetting.png" width="250"> | <img src="image/MobileLogs.png" width="250"> | <img src="image/MobileDebug.png" width="250"> |
+| <img src="images/MobileSetting.png" width="250"> | <img src="images/MobileLogs.png" width="250"> | <img src="images/MobileDebug.png" width="250"> |
 
 ---
 
