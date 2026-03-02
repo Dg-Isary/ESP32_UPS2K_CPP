@@ -39,9 +39,9 @@ It allows you to monitor UPS status, battery health, and power metrics in real-t
 
 ### 📸 Screenshots
 **Desktop Interface**
-| Dashboard (CN) | Dashboard (EN) |
-| :---: | :---: |
+| Dashboard (CN) |
 | ![Dashboard CN](image/PCIndexCN.png) |
+ Dashboard (EN) |
 | ![Dashboard EN](image/PCIndexEN.png) |
 | **Settings** | **System Logs** |
 | ![Settings](image/PCSetting.png) | ![Logs](image/PCLogs.png) |
